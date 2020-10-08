@@ -40,7 +40,7 @@
     "grunt-contrib-jshint": "^0.7.0",
     "grunt-mocha-test": "^0.7.0",
     "jshint": "*",
-    "supertest": "^0.13.0"
+    "supertest": "^0.15.0"
   },
   "dependencies": {
     "tsscmp": "^1.0.5"
