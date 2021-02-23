@@ -42,78 +42,171 @@ describe('CSRF', function () {
                 done(err);
             });
     });
-    it('should not require token on post to blacklist', function (done) {
+    it('should not require token on post to blocklist', function (done) {
         var app = mock({
             csrf: {
-                blacklist: ['/blacklist1', '/blacklist2']
+                blocklist: ['/blocklist1', { path: '/blocklist2', type: 'startsWith' }, { path: '/', type: 'exact' }]
             }
         });
 
-        app.post('/blacklist1', function (req, res) {
+        app.post('/blocklist1', function (req, res) {
             res.send(200);
         });
 
-        app.post('/blacklist2', function (req, res) {
+        app.post('/blocklist2', function (req, res) {
             res.send(200);
         });
 
-        app.post('/notblacklist', function (req, res) {
+        app.post('/notblocklist', function (req, res) {
+            res.send(200);
+        });
+
+        app.post('/', function (req, res) {
             res.send(200);
         });
 
         request(app)
-            .post('/blacklist1')
+            .post('/blocklist1')
             .expect(200)
             .end(function (err, res) {});
 
         request(app)
-            .post('/blacklist2')
+            .post('/blocklist2')
             .expect(200)
             .end(function (err, res) {});
 
         request(app)
-            .post('/notblacklist')
-            .expect(403)
-            .end(function (err, res) {
-                done(err);
-            });
-    });
-    it('should only require token on post to whitelist', function (done) {
-        var app = mock({
-            csrf: {
-                whitelist: ['/whitelist1', '/whitelist2']
-            }
-        });
-
-        app.post('/whitelist1', function (req, res) {
-            res.send(200);
-        });
-
-        app.post('/whitelist2', function (req, res) {
-            res.send(200);
-        });
-
-        app.post('/notwhitelist', function (req, res) {
-            res.send(200);
-        });
-
-        request(app)
-            .post('/whitelist1')
-            .expect(403)
-            .end(function (err, res) {});
-        
-        request(app)
-            .post('/whitelist2')
+            .post('/notblocklist')
             .expect(403)
             .end(function (err, res) {});
 
         request(app)
-            .post('/notwhitelist')
+            .post('/')
             .expect(200)
             .end(function (err, res) {
                 done(err);
             });
     });
+    it('should not require token on post to blocklist (string config)', function (done) {
+        var app = mock({
+            csrf: {
+                blocklist: '/blocklist1'
+            }
+        });
+
+        app.post('/blocklist1', function (req, res) {
+            res.send(200);
+        });
+
+        app.post('/notblocklist', function (req, res) {
+            res.send(200);
+        });
+
+        request(app)
+            .post('/blocklist1')
+            .expect(200)
+            .end(function (err, res) {});
+
+        request(app)
+            .post('/notblocklist')
+            .expect(403)
+            .end(function (err, res) {
+                done(err);
+            });
+    });
+    it('should only require token on post to allowlist', function (done) {
+        var app = mock({
+            csrf: {
+                allowlist: ['/allowlist1', { path: '/allowlist2', type: 'startsWith' }, { path: '/', type: 'exact' }]
+            }
+        });
+
+        app.post('/allowlist1', function (req, res) {
+            res.send(200);
+        });
+
+        app.post('/allowlist2', function (req, res) {
+            res.send(200);
+        });
+
+        app.post('/notallowlist', function (req, res) {
+            res.send(200);
+        });
+
+        app.post('/', function (req, res) {
+            res.send(200);
+        });
+
+        request(app)
+            .post('/allowlist1')
+            .expect(403)
+            .end(function (err, res) {});
+
+        request(app)
+            .post('/allowlist2')
+            .expect(403)
+            .end(function (err, res) {});
+
+        request(app)
+            .post('/notallowlist')
+            .expect(200)
+            .end(function (err, res) {
+                console.log(err);
+            });
+
+        request(app)
+            .post('/')
+            .expect(200)
+            .end(function (err, res) {
+                done(err);
+            });
+    });
+    it('should only require token on post to allowlist (string config)', function (done) {
+        var app = mock({
+            csrf: {
+                allowlist: '/allowlist1'
+            }
+        });
+
+        app.post('/allowlist1', function (req, res) {
+            res.send(200);
+        });
+
+        app.post('/notallowlist', function (req, res) {
+            res.send(200);
+        });
+
+        request(app)
+            .post('/allowlist1')
+            .expect(403)
+            .end(function (err, res) {});
+
+        request(app)
+            .post('/notallowlist')
+            .expect(200)
+            .end(function (err, res) {
+                done(err);
+            });
+    });
+
+    it('should throw error on invalid allowlist/blocklist config', function() {
+        assert.throws(function() {
+            mock({
+                csrf: {
+                    allowlist: [{ path: '/allowInvalid', type: 'regex' }]
+                }
+            });
+        }, /Invalid csrf config. type 'regex' is not supported.*/);
+
+        assert.throws(function() {
+            mock({
+                csrf: {
+                    allowlist: [{ path: '', type: 'startsWith' }]
+                }
+            });
+        }, /Invalid csrf config. path is required/);
+    });
+
     dd(sessionOptions, function () {
         it('GETs have a CSRF token (session type: {value})', function (ctx, done) {
             var mockConfig = (ctx.value === 'cookie') ? {
